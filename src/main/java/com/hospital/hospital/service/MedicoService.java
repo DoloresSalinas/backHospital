@@ -4,10 +4,14 @@ import com.hospital.hospital.model.dto.MedicoDTO;
 import com.hospital.hospital.model.entity.Medico;
 import com.hospital.hospital.model.entity.UnidadMedica;
 import com.hospital.hospital.model.entity.Usuario;
+import com.hospital.hospital.model.repository.CitaRepository;
 import com.hospital.hospital.model.repository.MedicoRepository;
 import com.hospital.hospital.model.repository.UnidadMedicaRepository;
 import com.hospital.hospital.model.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDate;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +23,7 @@ public class MedicoService {
     private final UsuarioRepository usuarioRepository;
     private final MedicoRepository medicoRepository;
     private final UnidadMedicaRepository unidadMedicaRepository;
+    private final CitaRepository citaRepository;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -113,4 +118,11 @@ public class MedicoService {
         medicoRepository.save(medico);
         usuarioRepository.save(medico.getUsuario());
     }
+
+
+    public Medico getMedicoConMenosCitas() {
+    return citaRepository.findMedicoConMenosCitasHoy(LocalDate.now())
+            .orElseThrow(() -> new RuntimeException(
+                "No hay médicos con citas registradas hoy"));
+}
 }

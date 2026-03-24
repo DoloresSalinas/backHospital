@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CitaRepository extends JpaRepository<Cita, Integer> {
@@ -47,5 +48,17 @@ public interface CitaRepository extends JpaRepository<Cita, Integer> {
 
     // Citas por medico
     List<Cita> findByMedicoIdMedico(Integer idMedico);
+
+    // Medico con menos citas del dia de hoy
+    @Query("""
+        SELECT c.medico
+        FROM Cita c
+        WHERE c.medico.activo = true
+          AND c.fecha = :fecha
+        GROUP BY c.medico
+        ORDER BY COUNT(c) ASC
+        LIMIT 1
+    """)
+    Optional<Medico> findMedicoConMenosCitasHoy(@Param("fecha") LocalDate fecha);
 
 }

@@ -75,4 +75,16 @@ public class MedicoController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+
+    @GetMapping("/menos-citas")
+    public ResponseEntity<?> getMedicoConMenosCitas() {
+    try {
+        Medico medico = medicoService.getMedicoConMenosCitas();
+        return ResponseEntity.ok(medico);
+    } catch (RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", e.getMessage()));
+    }
+}
 }

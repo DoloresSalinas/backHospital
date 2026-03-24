@@ -41,6 +41,7 @@ public class ResourceServer {
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/paciente/registro").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/medico/registro").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/medico/menos-citas").permitAll()
                         // jenni
                         .requestMatchers(HttpMethod.GET, "/api/paciente/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/paciente/**").permitAll()
