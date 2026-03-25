@@ -27,6 +27,9 @@ public class CitaScheduler {
         // Pendientes: 2 días desde la fecha de la cita (fecha)
         LocalDate hace2DiasDate = LocalDate.now().minusDays(2);
 
+        // Completadas: 2 días desde la fecha de la cita (fecha)
+        LocalDate hace2DiasDateTimeTime = LocalDate.now().minusDays(2);
+
         log.info(">>> Archivando citas canceladas anteriores a: {}", hace2DiasDateTime);
         citaRepository.archivarCitasCanceladas(
                 Cita.EstadoCita.archivada,
@@ -38,6 +41,12 @@ public class CitaScheduler {
                 Cita.EstadoCita.archivada,
                 Cita.EstadoCita.pendiente,
                 hace2DiasDate);
+
+        log.info(">>> Archivando citas completadas con fecha anterior a: {}", hace2DiasDateTimeTime);
+        citaRepository.archivarCitasCompletadas(
+                Cita.EstadoCita.archivada,
+                Cita.EstadoCita.completada,
+                hace2DiasDateTimeTime);
 
         log.info(">>> Archivado completado");
     }
