@@ -48,18 +48,20 @@ public class CitaController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         }
     }
- // Endpoint para que el paciente vea sus citas (autenticado)
+
+    // Endpoint para que el paciente vea sus citas (autenticado)
     @GetMapping("/mis-citas")
     public ResponseEntity<?> getMisCitasPaciente() {
         try {
             Integer idUsuario = JwtUtil.getIdUsuario();
-            List<Cita> citas = citaService.obtenerCitasPorPaciente(idUsuario);
+            // ✅ Usa el nuevo método que resuelve idPaciente internamente
+            List<Cita> citas = citaService.obtenerCitasPorIdUsuario(idUsuario);
             return ResponseEntity.ok(citas);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
         }
-}
+    }
 
     @PutMapping("/cancelar/{idCita}")
     public ResponseEntity<?> cancelarCita(@PathVariable Integer idCita) {
