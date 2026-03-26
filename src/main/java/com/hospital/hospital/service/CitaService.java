@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -36,12 +37,12 @@ public class CitaService {
     private final PacienteRepository pacienteRepository;
 
     public CitaService(CitaRepository citaRepository,
-                       SignosVitalesRepository signosVitalesRepository,
-                       DiagnosticoRepository diagnosticoRepository,
-                       RecetaRepository recetaRepository,
-                       MedicamentoRepository medicamentoRepository,
-                        MedicoRepository medicoRepository,
-                        PacienteRepository pacienteRepository) {
+            SignosVitalesRepository signosVitalesRepository,
+            DiagnosticoRepository diagnosticoRepository,
+            RecetaRepository recetaRepository,
+            MedicamentoRepository medicamentoRepository,
+            MedicoRepository medicoRepository,
+            PacienteRepository pacienteRepository) {
         this.citaRepository = citaRepository;
         this.signosVitalesRepository = signosVitalesRepository;
         this.diagnosticoRepository = diagnosticoRepository;
@@ -51,38 +52,44 @@ public class CitaService {
         this.pacienteRepository = pacienteRepository;
     }
 
-    // Determina el turno según la hora
-    private Medico.Turno determinarTurno(LocalTime hora) {
+    // ✅ Devuelve el turno principal + jornada_acumulada siempre
+    private List<Medico.Turno> getTurnosParaHora(LocalTime hora) {
+        Medico.Turno turnoPrincipal;
+
         if (hora.isBefore(LocalTime.of(14, 0))) {
-            return Medico.Turno.matutino;
+            turnoPrincipal = Medico.Turno.matutino;
         } else if (hora.isBefore(LocalTime.of(20, 0))) {
-            return Medico.Turno.vespertino;
+            turnoPrincipal = Medico.Turno.vespertino;
         } else {
-            return Medico.Turno.nocturno;
+            turnoPrincipal = Medico.Turno.nocturno;
         }
+
+        return List.of(turnoPrincipal, Medico.Turno.jornada_acumulada);
     }
 
-    // Asigna el médico con menos citas en esa fecha y turno
+    // ✅ Ahora usa medicoRepository directamente
     private Medico asignarMedico(LocalDate fecha, LocalTime hora) {
-        Medico.Turno turno = determinarTurno(hora);
-        List<Medico> medicos = citaRepository.findMedicosByTurno(turno);
+        List<Medico.Turno> turnos = getTurnosParaHora(hora);
+        List<Medico> medicos = medicoRepository.findByTurnosAndActivoTrue(turnos);
 
         if (medicos.isEmpty()) {
-            throw new RuntimeException("No hay médicos disponibles en ese horario");
+            throw new RuntimeException(
+                    "No hay médicos disponibles para el horario: " + hora);
         }
 
         return medicos.stream()
-                .min((m1, m2) -> (int) (citaRepository.countByMedicoAndFecha(m1, fecha)
-                        - citaRepository.countByMedicoAndFecha(m2, fecha)))
+                .min(Comparator.comparingLong(m -> citaRepository.countByMedicoAndFecha(m, fecha)))
                 .orElseThrow(() -> new RuntimeException("No se pudo asignar un médico"));
     }
 
+    // ✅ Parámetro renombrado a idUsuario para mayor claridad
     @Transactional
-    public Cita agendarCita(Integer idPaciente, LocalDate fecha, LocalTime hora,
+    public Cita agendarCita(Integer idUsuario, LocalDate fecha, LocalTime hora,
             String motivo, Cita.TipoCita tipo) {
 
-        Paciente paciente = pacienteRepository.findById(idPaciente)
-                .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
+        Paciente paciente = pacienteRepository.obtenerConUsuario(idUsuario)
+                .orElseThrow(() -> new RuntimeException(
+                        "Paciente no encontrado para idUsuario: " + idUsuario));
 
         Medico medico = asignarMedico(fecha, hora);
 
@@ -95,16 +102,23 @@ public class CitaService {
         cita.setPaciente(paciente);
         cita.setMedico(medico);
         cita.setFolio(generarFolio());
+        cita.setFechaCreacion(java.time.LocalDateTime.now());
 
         return citaRepository.save(cita);
     }
 
-    // Ver citas del paciente
     public List<Cita> obtenerCitasPorPaciente(Integer idPaciente) {
         return citaRepository.findByPacienteIdPaciente(idPaciente);
     }
 
-    // Cancelar cita
+    // ✅ Nuevo método — recibe idUsuario y resuelve idPaciente internamente
+    public List<Cita> obtenerCitasPorIdUsuario(Integer idUsuario) {
+        Paciente paciente = pacienteRepository.obtenerConUsuario(idUsuario)
+                .orElseThrow(() -> new RuntimeException(
+                        "Paciente no encontrado para idUsuario: " + idUsuario));
+        return citaRepository.findByPacienteIdPaciente(paciente.getIdPaciente());
+    }
+
     @Transactional
     public Cita cancelarCita(Integer idCita) {
         Cita cita = citaRepository.findById(idCita)
@@ -122,8 +136,6 @@ public class CitaService {
         return "CITA-" + System.currentTimeMillis();
     }
 
-
-    // Obtener todas las citas del médico autenticado
     public List<CitaDTO> getCitasByMedico(Integer idUsuario) {
         Medico medico = medicoRepository.findByUsuarioIdUsuario(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
@@ -135,73 +147,67 @@ public class CitaService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-public void completarCita(Integer idCita, CompletarCitaRequest request) {
+    public void completarCita(Integer idCita, CompletarCitaRequest request) {
 
-    // 1. Buscar y validar la cita
-    Cita cita = citaRepository.findById(idCita)
-            .orElseThrow(() -> new RuntimeException("Cita no encontrada con id: " + idCita));
+        Cita cita = citaRepository.findById(idCita)
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada con id: " + idCita));
 
-    // 2. Signos Vitales
-    CompletarCitaRequest.SignosVitalesDTO svDTO = request.getSignosVitales();
-    if (svDTO != null) {
-        SignosVitales sv = new SignosVitales();
-        sv.setPesoKg(svDTO.getPesoKg());
-        sv.setTallaM(svDTO.getTallaM());
-        sv.setPresionArterial(svDTO.getPresionArterial());
-        sv.setFrecuenciaCardiaca(svDTO.getFrecuenciaCardiaca());
-        sv.setFrecuenciaRespiratoria(svDTO.getFrecuenciaRespiratoria());
-        sv.setTemperatura(svDTO.getTemperatura());
-        sv.setSpo2(svDTO.getSpo2());
-        sv.setGlucosa(svDTO.getGlucosa());
-        sv.setIdCita(idCita.longValue());
-        signosVitalesRepository.save(sv);
-    }
+        CompletarCitaRequest.SignosVitalesDTO svDTO = request.getSignosVitales();
+        if (svDTO != null) {
+            SignosVitales sv = new SignosVitales();
+            sv.setPesoKg(svDTO.getPesoKg());
+            sv.setTallaM(svDTO.getTallaM());
+            sv.setPresionArterial(svDTO.getPresionArterial());
+            sv.setFrecuenciaCardiaca(svDTO.getFrecuenciaCardiaca());
+            sv.setFrecuenciaRespiratoria(svDTO.getFrecuenciaRespiratoria());
+            sv.setTemperatura(svDTO.getTemperatura());
+            sv.setSpo2(svDTO.getSpo2());
+            sv.setGlucosa(svDTO.getGlucosa());
+            sv.setIdCita(idCita.longValue());
+            signosVitalesRepository.save(sv);
+        }
 
-    // 3. Diagnóstico ← CORREGIDO: setIdCita en lugar de setCita
-    // 3. Diagnóstico
-CompletarCitaRequest.DiagnosticoDTO dxDTO = request.getDiagnostico();
-if (dxDTO != null) {
-    Diagnostico dx = new Diagnostico();
-    dx.setCie10(dxDTO.getCie10());
-    dx.setDescripcion(dxDTO.getDescripcion());
-    dx.setTipo(dxDTO.getTipo());
-    dx.setMedicamentos_base(dxDTO.getMedicamentosBase());
-    dx.setTratamiento(dxDTO.getTratamiento());
-    dx.setIndicaciones(dxDTO.getIndicaciones());
-    dx.setFun_alta(dxDTO.getFunAlta());
-    dx.setIdCita(idCita.longValue()); // ← ¿tienes esta línea exactamente así?
-    diagnosticoRepository.save(dx);
-}
+        CompletarCitaRequest.DiagnosticoDTO dxDTO = request.getDiagnostico();
+        if (dxDTO != null) {
+            Diagnostico dx = new Diagnostico();
+            dx.setCie10(dxDTO.getCie10());
+            dx.setDescripcion(dxDTO.getDescripcion());
+            dx.setTipo(dxDTO.getTipo());
+            dx.setMedicamentos_base(dxDTO.getMedicamentosBase());
+            dx.setTratamiento(dxDTO.getTratamiento());
+            dx.setIndicaciones(dxDTO.getIndicaciones());
+            dx.setFun_alta(dxDTO.getFunAlta());
+            dx.setIdCita(idCita.longValue());
+            diagnosticoRepository.save(dx);
+        }
 
-    // 4. Receta + Medicamentos
-    CompletarCitaRequest.RecetaDTO recetaDTO = request.getReceta();
-    if (recetaDTO != null) {
-        Receta receta = new Receta();
-        receta.setFolio(recetaDTO.getFolio());
-        receta.setFecha(LocalDate.now());
-        receta.setVencimiento(recetaDTO.getVencimiento());
-        receta.setEstado(Receta.EstadoReceta.activa);
-        receta.setCita(cita);
-        Receta recetaGuardada = recetaRepository.save(receta);
+        CompletarCitaRequest.RecetaDTO recetaDTO = request.getReceta();
+        if (recetaDTO != null) {
+            Receta receta = new Receta();
+            receta.setFolio(recetaDTO.getFolio());
+            receta.setFecha(LocalDate.now());
+            receta.setVencimiento(recetaDTO.getVencimiento());
+            receta.setEstado(Receta.EstadoReceta.activa);
+            receta.setCita(cita);
+            Receta recetaGuardada = recetaRepository.save(receta);
 
-        if (recetaDTO.getMedicamentos() != null) {
-            for (CompletarCitaRequest.MedicamentoDTO medDTO : recetaDTO.getMedicamentos()) {
-                Medicamento med = new Medicamento();
-                med.setNombre(medDTO.getNombre());
-                med.setPresentacion(medDTO.getPresentacion());
-                med.setDosis(medDTO.getDosis());
-                med.setFrecuencia(medDTO.getFrecuencia());
-                med.setDuracion(medDTO.getDuracion());
-                med.setCantidad(medDTO.getCantidad());
-                med.setVia(medDTO.getVia());
-                med.setReceta(recetaGuardada);
-                medicamentoRepository.save(med);
+            if (recetaDTO.getMedicamentos() != null) {
+                for (CompletarCitaRequest.MedicamentoDTO medDTO : recetaDTO.getMedicamentos()) {
+                    Medicamento med = new Medicamento();
+                    med.setNombre(medDTO.getNombre());
+                    med.setPresentacion(medDTO.getPresentacion());
+                    med.setDosis(medDTO.getDosis());
+                    med.setFrecuencia(medDTO.getFrecuencia());
+                    med.setDuracion(medDTO.getDuracion());
+                    med.setCantidad(medDTO.getCantidad());
+                    med.setVia(medDTO.getVia());
+                    med.setReceta(recetaGuardada);
+                    medicamentoRepository.save(med);
+                }
             }
         }
-    }
 
-    // 5. Marcar cita como completada
-    cita.setEstado(Cita.EstadoCita.completada);
-    citaRepository.save(cita);
-}
+        cita.setEstado(Cita.EstadoCita.completada);
+        citaRepository.save(cita);
+    }
 }

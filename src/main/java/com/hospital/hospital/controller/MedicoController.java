@@ -1,4 +1,5 @@
 package com.hospital.hospital.controller;
+
 import com.hospital.hospital.model.dto.MedicoDTO;
 import com.hospital.hospital.model.entity.Medico;
 import com.hospital.hospital.service.MedicoService;
@@ -20,18 +21,17 @@ public class MedicoController {
     public ResponseEntity<?> registrarMedico(@RequestBody Map<String, Object> body) {
         try {
             Medico medico = medicoService.registrarMedico(
-                (String) body.get("correo"),
-                (String) body.get("contrasena"),
-                (String) body.get("nombre"),
-                (String) body.get("apPaterno"),
-                (String) body.get("apMaterno"),
-                (String) body.get("especialidad"),
-                (String) body.get("cedulaProfesional"),
-                (String) body.get("numEmpleado"),
-                Medico.Turno.valueOf((String) body.get("turno")),
-                (String) body.get("consultorio"),
-                ((Integer) body.get("idUm")).shortValue()
-            );
+                    (String) body.get("correo"),
+                    (String) body.get("contrasena"),
+                    (String) body.get("nombre"),
+                    (String) body.get("apPaterno"),
+                    (String) body.get("apMaterno"),
+                    (String) body.get("especialidad"),
+                    (String) body.get("cedulaProfesional"),
+                    (String) body.get("numEmpleado"),
+                    Medico.Turno.valueOf((String) body.get("turno")),
+                    (String) body.get("consultorio"),
+                    ((Integer) body.get("idUm")).shortValue());
             return ResponseEntity.status(HttpStatus.CREATED).body(medico);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -76,15 +76,14 @@ public class MedicoController {
         }
     }
 
-
     @GetMapping("/menos-citas")
     public ResponseEntity<?> getMedicoConMenosCitas() {
-    try {
-        Medico medico = medicoService.getMedicoConMenosCitas();
-        return ResponseEntity.ok(medico);
-    } catch (RuntimeException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", e.getMessage()));
+        try {
+            Medico medico = medicoService.getMedicoConMenosCitas();
+            return ResponseEntity.ok(medico);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
-}
 }
