@@ -52,6 +52,12 @@ public class ExpedienteService {
         return expedienteRepository.findById(id).orElse(null);
     }
 
+    public Expediente getExpedienteActivo(Integer idPaciente) {
+        return expedienteRepository
+            .findByIdPacienteAndEstado(idPaciente, "ACTIVO")
+            .orElseThrow(() -> new RuntimeException("No hay expediente activo"));
+    }
+
     public void deleteExpediente(Long id) {
         expedienteRepository.deleteById(id);
     }
