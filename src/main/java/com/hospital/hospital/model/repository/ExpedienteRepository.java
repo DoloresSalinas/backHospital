@@ -7,5 +7,6 @@ import com.hospital.hospital.model.entity.Expediente;
 public interface ExpedienteRepository extends JpaRepository<Expediente, Long> {
 
     List<Expediente> findByIdPaciente_IdPaciente(Integer idPaciente);
+    Optional<Expediente> findByIdPacienteAndEstado(Integer idPaciente, String estado);
 
 }

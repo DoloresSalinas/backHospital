@@ -69,16 +69,28 @@ public class ExpedienteController {
         return generarRespuesta(null,"El expediente con ID " + id + " no existe", HttpStatus.NOT_FOUND);
     } 
 
+    // @GetMapping("/paciente/{idPaciente}")
+    // public ResponseEntity<Object> getExpedientesByPaciente(@PathVariable Integer idPaciente) { 
+    //     List<Expediente> e = expedienteService.getExpedientesByPaciente(idPaciente);
+        
+    //     if (e != null && !e.isEmpty()) {
+    //         return generarRespuesta(e, "Expedientes encontrados para el paciente " + idPaciente, HttpStatus.OK);
+    //     }
+        
+    //     return generarRespuesta(null, "El paciente con ID " + idPaciente + " no tiene expedientes asociados", HttpStatus.NOT_FOUND);
+    // } 
+
     @GetMapping("/paciente/{idPaciente}")
-    public ResponseEntity<Object> getExpedientesByPaciente(@PathVariable Integer idPaciente) { 
-        List<Expediente> e = expedienteService.getExpedientesByPaciente(idPaciente);
+    public ResponseEntity<Object> getExpedienteByPaciente(@PathVariable Integer idPaciente) { 
         
-        if (e != null && !e.isEmpty()) {
-            return generarRespuesta(e, "Expedientes encontrados para el paciente " + idPaciente, HttpStatus.OK);
+        Expediente e = expedienteService.getExpedienteActivo(idPaciente);
+
+        if (e != null) {
+            return generarRespuesta(e, "Expediente actual del paciente " + idPaciente, HttpStatus.OK);
         }
-        
-        return generarRespuesta(null, "El paciente con ID " + idPaciente + " no tiene expedientes asociados", HttpStatus.NOT_FOUND);
-    }   
+
+        return generarRespuesta(null, "No hay expediente activo para el paciente " + idPaciente, HttpStatus.NOT_FOUND);
+    } 
 
     // @PatchMapping("/expediente-update/{idExpediente}")
     // public ResponseEntity<?> actualizarExpediente(
