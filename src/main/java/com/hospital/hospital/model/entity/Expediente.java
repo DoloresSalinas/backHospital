@@ -17,7 +17,7 @@ public class Expediente {
     @Column(name = "id_expediente")
     private Long idExpediente;
     
-    @Column(name = "folio", length = 30, nullable = false, unique = true)
+    @Column(name = "folio", length = 30, nullable = false)
     private String folio;
 
     @Column(columnDefinition = "TEXT")
