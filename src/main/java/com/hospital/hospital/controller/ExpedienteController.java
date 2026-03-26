@@ -80,14 +80,29 @@ public class ExpedienteController {
         return generarRespuesta(null, "El paciente con ID " + idPaciente + " no tiene expedientes asociados", HttpStatus.NOT_FOUND);
     }   
 
+    // @PatchMapping("/expediente-update/{idExpediente}")
+    // public ResponseEntity<?> actualizarExpediente(
+    //         @PathVariable Long idExpediente,
+    //         @RequestBody Map<String, Object> cambios) {
+
+    //     Expediente nuevo = expedienteService.actualizarExpediente(idExpediente, cambios);
+
+    //     return ResponseEntity.ok(nuevo);
+    // }
+
     @PatchMapping("/expediente-update/{idExpediente}")
-    public ResponseEntity<?> actualizarExpediente(
+    public ResponseEntity<Object> actualizarExpediente(
             @PathVariable Long idExpediente,
             @RequestBody Map<String, Object> cambios) {
-
-        Expediente nuevo = expedienteService.actualizarExpediente(idExpediente, cambios);
-
-        return ResponseEntity.ok(nuevo);
+        try {
+            Expediente nuevo = expedienteService.actualizarExpediente(idExpediente, cambios);
+            return generarRespuesta(nuevo, "Expediente actualizado correctamente", HttpStatus.OK);
+        } catch (RuntimeException e) { 
+            return generarRespuesta(null, e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            e.printStackTrace(); // o log.error
+            return generarRespuesta(null, "Error interno al actualizar el expediente", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PutMapping("/{id}")
