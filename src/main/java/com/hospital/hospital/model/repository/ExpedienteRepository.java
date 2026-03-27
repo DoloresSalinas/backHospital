@@ -1,6 +1,8 @@
 package com.hospital.hospital.model.repository;
 
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.hospital.hospital.model.entity.Expediente;
 
