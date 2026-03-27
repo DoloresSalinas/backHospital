@@ -1,12 +1,8 @@
 package com.hospital.hospital.model.entity;
 
-
-import com.hospital.hospital.model.converter.ListToStringConverter;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.ArrayList;
 
 @Entity
 @Table(name = "expediente")
@@ -60,11 +56,20 @@ public class Expediente {
     public Expediente() {}
 
     @PrePersist
-    protected void onCreate() {fechaApertura = LocalDate.now(); fechaActualizacion = LocalDateTime.now();}
+    protected void onCreate() {
+        // Si la fechaApertura ya está asignada (por ejemplo al clonar), no la sobrescribimos
+        if (fechaApertura == null) {
+            fechaApertura = LocalDate.now();
+        }
+        fechaActualizacion = LocalDateTime.now();
+    }
 
     @PreUpdate
-    protected void onUpdate() {fechaActualizacion = LocalDateTime.now();}
+    protected void onUpdate() {
+        fechaActualizacion = LocalDateTime.now();
+    }
 
+    // Getters y setters
     public Long getIdExpediente() { return idExpediente; }
     public void setIdExpediente(Long idExpediente) { this.idExpediente = idExpediente; }
 
@@ -92,20 +97,18 @@ public class Expediente {
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
 
-    public LocalDate getFechaApertura() {return fechaApertura;}
-    public void setFechaApertura(LocalDate fechaApertura) {this.fechaApertura = fechaApertura;}
+    public LocalDate getFechaApertura() { return fechaApertura; }
+    public void setFechaApertura(LocalDate fechaApertura) { this.fechaApertura = fechaApertura; }
 
-    public LocalDateTime getFechaActualizacion() {return fechaActualizacion;}
-    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {this.fechaActualizacion = fechaActualizacion;}
+    public LocalDateTime getFechaActualizacion() { return fechaActualizacion; }
+    public void setFechaActualizacion(LocalDateTime fechaActualizacion) { this.fechaActualizacion = fechaActualizacion; }
 
     public Paciente getIdPaciente() { return idPaciente; }
     public void setIdPaciente(Paciente idPaciente) { this.idPaciente = idPaciente; }
 
-    public Medico getIdMedico() { return medico; }
-    public void setIdMedico(Medico idMedico) { this.medico = idMedico; }
+    public Medico getMedico() { return medico; }                // Nombre corregido
+    public void setMedico(Medico medico) { this.medico = medico; } // Setter corregido
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
-    
-
 }
