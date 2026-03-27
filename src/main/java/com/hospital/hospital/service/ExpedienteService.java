@@ -31,23 +31,29 @@ public class ExpedienteService {
 
     // Guardar expediente (primera creación)
     public Expediente saveExpediente(Expediente expediente) {
-
         Integer idUsuario = JwtUtil.getIdUsuario();
 
         // Buscar paciente por id_usuario
-        Paciente idPaciente = pacienteRepository
+        Paciente paciente = pacienteRepository
                 .obtenerConUsuario(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
 
-        expediente.setIdPaciente(idPaciente);
+        expediente.setIdPaciente(paciente);
 
-        // Asignar médico – supongamos que también se obtiene desde el contexto de seguridad
-        // En este ejemplo, supongamos que el médico tiene una relación con el usuario.
-        // Si no tienes la relación, debes obtenerlo de otra forma.
-        // Temporal: lanza error si no se encuentra
+        // Si el expediente ya tiene médico asignado (desde el frontend), lo dejamos.
+        // Si no, podríamos intentar obtenerlo del usuario actual.
+        // Por ahora, asumimos que el frontend envía el médico.
+        // Si es necesario, descomenta el bloque para buscar el médico por usuario.
+        /*
         Medico medico = medicoRepository.findByUsuarioId(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Médico no encontrado para el usuario actual"));
-        expediente.setMedico(medico);  // Nombre del setter corregido
+        expediente.setMedico(medico);
+        */
+
+        // Si el médico es nulo y es requerido, lanzamos excepción
+        if (expediente.getMedico() == null) {
+            throw new RuntimeException("El expediente debe tener un médico asignado");
+        }
 
         return expedienteRepository.save(expediente);
     }
