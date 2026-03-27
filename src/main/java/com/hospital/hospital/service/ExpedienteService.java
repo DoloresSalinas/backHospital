@@ -8,10 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.hospital.hospital.model.entity.Expediente;
 import com.hospital.hospital.model.entity.Paciente;
-import com.hospital.hospital.model.entity.Medico;
 import com.hospital.hospital.model.repository.ExpedienteRepository;
 import com.hospital.hospital.model.repository.PacienteRepository;
-import com.hospital.hospital.model.repository.MedicoRepository; // Asumiendo que existe
+import com.hospital.hospital.model.repository.MedicoRepository;
 import com.hospital.hospital.util.JwtUtil;
 
 @Service
@@ -19,7 +18,7 @@ public class ExpedienteService {
 
     private final ExpedienteRepository expedienteRepository;
     private final PacienteRepository pacienteRepository;
-    private final MedicoRepository medicoRepository; // Necesario para asignar médico
+    private final MedicoRepository medicoRepository;  // Se mantiene por si se usa en el futuro
 
     public ExpedienteService(ExpedienteRepository expedienteRepository,
                              PacienteRepository pacienteRepository,
@@ -31,23 +30,21 @@ public class ExpedienteService {
 
     // Guardar expediente (primera creación)
     public Expediente saveExpediente(Expediente expediente) {
-
         Integer idUsuario = JwtUtil.getIdUsuario();
 
         // Buscar paciente por id_usuario
-        Paciente idPaciente = pacienteRepository
+        Paciente paciente = pacienteRepository
                 .obtenerConUsuario(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
 
-        expediente.setIdPaciente(idPaciente);
+        expediente.setIdPaciente(paciente);
 
-        // Asignar médico – supongamos que también se obtiene desde el contexto de seguridad
-        // En este ejemplo, supongamos que el médico tiene una relación con el usuario.
-        // Si no tienes la relación, debes obtenerlo de otra forma.
-        // Temporal: lanza error si no se encuentra
-        Medico medico = medicoRepository.findByUsuarioId(idUsuario)
-                .orElseThrow(() -> new RuntimeException("Médico no encontrado para el usuario actual"));
-        expediente.setMedico(medico);  // Nombre del setter corregido
+        // Si el expediente ya tiene médico asignado (desde el frontend), se deja.
+        // Si no, se podría intentar obtener el médico del usuario actual.
+        // Por ahora, si el médico es nulo, lanzamos excepción.
+        if (expediente.getMedico() == null) {
+            throw new RuntimeException("El expediente debe tener un médico asignado");
+        }
 
         return expedienteRepository.save(expediente);
     }
@@ -64,7 +61,6 @@ public class ExpedienteService {
         return expedienteRepository.findById(id).orElse(null);
     }
 
-    // Devuelve null si no hay expediente activo (para que el controlador maneje el 404)
     public Expediente getExpedienteActivo(Integer idPaciente) {
         return expedienteRepository
             .buscarActivoPorPaciente(idPaciente, "ACTIVO")
@@ -75,7 +71,7 @@ public class ExpedienteService {
         expedienteRepository.deleteById(id);
     }
 
-    // PUT: Actualiza sin crear nueva versión (no toca estado)
+    // PUT: Actualiza sin crear nueva versión
     public Expediente updateExpediente(Long id, Expediente actualizado) {
         return expedienteRepository.findById(id).map(existente -> {
             if (actualizado.getFolio() != null)
@@ -98,10 +94,9 @@ public class ExpedienteService {
         }).orElse(null);
     }
 
-    // PATCH: Crea nueva versión con los cambios
+    // PATCH: Crea nueva versión con los cambios (acumulando valores)
     @Transactional
     public Expediente actualizarExpediente(Long idExpediente, Map<String, Object> cambios) {
-        // Obtener expediente actual
         Expediente actual = expedienteRepository.findById(idExpediente)
             .orElseThrow(() -> new RuntimeException("Expediente no encontrado"));
 
@@ -119,12 +114,12 @@ public class ExpedienteService {
         nuevo.setEnf_cronicas(actual.getEnf_cronicas());
         nuevo.setAnt_ginecoobstetricos(actual.getAnt_ginecoobstetricos());
         nuevo.setObservaciones(actual.getObservaciones());
-        nuevo.setFechaApertura(actual.getFechaApertura()); // Conserva la original
+        nuevo.setFechaApertura(actual.getFechaApertura()); // Conserva original
         nuevo.setIdPaciente(actual.getIdPaciente());
         nuevo.setMedico(actual.getMedico());
         nuevo.setEstado("ACTIVO");
 
-        // Aplicar cambios dinámicos (reemplazo o concatenación)
+        // Aplicar cambios (concatenando)
         aplicarCambios(nuevo, cambios);
 
         return expedienteRepository.save(nuevo);
@@ -132,15 +127,11 @@ public class ExpedienteService {
 
     private void aplicarCambios(Expediente nuevo, Map<String, Object> cambios) {
         cambios.forEach((campo, valor) -> {
-            if (valor == null) return; // Opcional: ignorar nulos
-
+            if (valor == null) return;
             String valorStr = (String) valor;
 
             switch (campo) {
                 case "ant_heredofamiliares":
-                    // Modo reemplazo (comportamiento original):
-                    // nuevo.setAnt_heredofamiliares(valorStr);
-                    // Modo concatenación (acumular):
                     nuevo.setAnt_heredofamiliares(concatenarSiNoVacio(nuevo.getAnt_heredofamiliares(), valorStr));
                     break;
                 case "ant_patologicos":
@@ -173,10 +164,9 @@ public class ExpedienteService {
         });
     }
 
-    // Método auxiliar para concatenar si ambos no están vacíos
     private String concatenarSiNoVacio(String actual, String nuevo) {
         if (actual == null || actual.isBlank()) return nuevo;
         if (nuevo == null || nuevo.isBlank()) return actual;
-        return actual + ", " + nuevo; // Cambia el separador si lo prefieres
+        return actual + "\n" + nuevo;
     }
 }
