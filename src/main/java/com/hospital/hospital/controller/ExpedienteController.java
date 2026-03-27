@@ -25,7 +25,6 @@ public class ExpedienteController {
         this.pacienteService = pacienteService;
     }
 
-    // método solo se usará para ERRORES o mensajes específicos
     private ResponseEntity<Object> generarRespuesta(Object data, String mensaje, HttpStatus status) {
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("status", status.value());
@@ -40,11 +39,8 @@ public class ExpedienteController {
     @PostMapping
     public ResponseEntity<Object> createExpediente(@RequestBody Expediente expediente) {
         try {
-
             Expediente nuevo = expedienteService.saveExpediente(expediente);
-
             return generarRespuesta(nuevo, "Expediente creado exitosamente", HttpStatus.CREATED);
-
         } catch (Exception e) {
             return generarRespuesta(null,
                     "Error al crear el expediente: " + e.getMessage(),
@@ -62,45 +58,20 @@ public class ExpedienteController {
     public ResponseEntity<Object> getExpedienteById(@PathVariable Long id) {
         Expediente e = expedienteService.getExpedienteById(id);
         if (e != null) {
-            // ÉXITO: Envía solo los datos del expediente
             return generarRespuesta(e, "Expediente encontrado", HttpStatus.OK);
         }
-        // ERROR: Envía mensaje y estatus
-        return generarRespuesta(null,"El expediente con ID " + id + " no existe", HttpStatus.NOT_FOUND);
+        return generarRespuesta(null, "El expediente con ID " + id + " no existe", HttpStatus.NOT_FOUND);
     } 
 
-    // @GetMapping("/paciente/{idPaciente}")
-    // public ResponseEntity<Object> getExpedientesByPaciente(@PathVariable Integer idPaciente) { 
-    //     List<Expediente> e = expedienteService.getExpedientesByPaciente(idPaciente);
-        
-    //     if (e != null && !e.isEmpty()) {
-    //         return generarRespuesta(e, "Expedientes encontrados para el paciente " + idPaciente, HttpStatus.OK);
-    //     }
-        
-    //     return generarRespuesta(null, "El paciente con ID " + idPaciente + " no tiene expedientes asociados", HttpStatus.NOT_FOUND);
-    // } 
-
+    // Endpoint modificado para manejar correctamente la ausencia de expediente activo
     @GetMapping("/paciente/{idPaciente}")
     public ResponseEntity<Object> getExpedienteByPaciente(@PathVariable Integer idPaciente) { 
-        
         Expediente e = expedienteService.getExpedienteActivo(idPaciente);
-
         if (e != null) {
             return generarRespuesta(e, "Expediente actual del paciente " + idPaciente, HttpStatus.OK);
         }
-
         return generarRespuesta(null, "No hay expediente activo para el paciente " + idPaciente, HttpStatus.NOT_FOUND);
     } 
-
-    // @PatchMapping("/expediente-update/{idExpediente}")
-    // public ResponseEntity<?> actualizarExpediente(
-    //         @PathVariable Long idExpediente,
-    //         @RequestBody Map<String, Object> cambios) {
-
-    //     Expediente nuevo = expedienteService.actualizarExpediente(idExpediente, cambios);
-
-    //     return ResponseEntity.ok(nuevo);
-    // }
 
     @PatchMapping("/expediente-update/{idExpediente}")
     public ResponseEntity<Object> actualizarExpediente(
@@ -112,7 +83,7 @@ public class ExpedienteController {
         } catch (RuntimeException e) { 
             return generarRespuesta(null, e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            e.printStackTrace(); // o log.error
+            e.printStackTrace();
             return generarRespuesta(null, "Error interno al actualizar el expediente", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -121,10 +92,8 @@ public class ExpedienteController {
     public ResponseEntity<Object> actualizar(@PathVariable Long id, @RequestBody Expediente actualizado) {
         Expediente updated = expedienteService.updateExpediente(id, actualizado);
         if (updated != null) {
-            // ÉXITO: Envía solo los datos actualizados
             return generarRespuesta(updated, "Expediente actualizado exitosamente", HttpStatus.OK);
         }
-        // ERROR: Envía mensaje y estatus
         return generarRespuesta(null, "No se pudo actualizar: ID " + id + " no encontrado", HttpStatus.NOT_FOUND);
     }
 
@@ -133,10 +102,8 @@ public class ExpedienteController {
         Expediente e = expedienteService.getExpedienteById(id);
         if (e != null) {
             expedienteService.deleteExpediente(id);
-            // ÉXITO: En un delete exitoso, solemos enviar un mensaje de confirmación
             return generarRespuesta(null, "Expediente eliminado correctamente", HttpStatus.OK);
         }
-        // ERROR: Envía mensaje y estatus
         return generarRespuesta(null, "Error al eliminar: ID " + id + " no existe", HttpStatus.NOT_FOUND);
     }
 }
