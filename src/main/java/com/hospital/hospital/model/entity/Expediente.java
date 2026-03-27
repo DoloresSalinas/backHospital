@@ -46,11 +46,11 @@ public class Expediente {
     @Column(name = "ultima_actualizacion", nullable = false)
     private LocalDateTime fechaActualizacion;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_paciente", nullable = false)
     private Paciente idPaciente; 
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_medico", nullable = false)
     private Medico medico; 
 
