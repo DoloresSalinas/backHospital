@@ -18,7 +18,7 @@ public class ExpedienteService {
 
     private final ExpedienteRepository expedienteRepository;
     private final PacienteRepository pacienteRepository;
-    private final MedicoRepository medicoRepository;  // Se mantiene por si se usa en el futuro
+    private final MedicoRepository medicoRepository; 
 
     public ExpedienteService(ExpedienteRepository expedienteRepository,
                              PacienteRepository pacienteRepository,
@@ -28,23 +28,24 @@ public class ExpedienteService {
         this.medicoRepository = medicoRepository;
     }
 
-    // Guardar expediente (primera creación)
+    // Crear expediente 
     public Expediente saveExpediente(Expediente expediente) {
+
+        // Obtener médico logueado
         Integer idUsuario = JwtUtil.getIdUsuario();
 
-        // Buscar paciente por id_usuario
-        Paciente paciente = pacienteRepository
+        var medico = medicoRepository
                 .obtenerConUsuario(idUsuario)
+                .orElseThrow(() -> new RuntimeException("Médico no encontrado"));
+
+        Integer idPaciente = expediente.getIdPaciente().getIdPaciente();
+
+        Paciente paciente = pacienteRepository.findById(idPaciente)
                 .orElseThrow(() -> new RuntimeException("Paciente no encontrado"));
 
+        expediente.setMedico(medico);
         expediente.setIdPaciente(paciente);
-
-        // Si el expediente ya tiene médico asignado (desde el frontend), se deja.
-        // Si no, se podría intentar obtener el médico del usuario actual.
-        // Por ahora, si el médico es nulo, lanzamos excepción.
-        if (expediente.getMedico() == null) {
-            throw new RuntimeException("El expediente debe tener un médico asignado");
-        }
+        expediente.setEstado("ACTIVO");
 
         return expedienteRepository.save(expediente);
     }
